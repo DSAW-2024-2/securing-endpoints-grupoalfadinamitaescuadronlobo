@@ -1,57 +1,41 @@
 const express = require('express');
 const router = express.Router();
 const users = require('../data/users');
-const { v4: uuidv4 } = require('uuid');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-router.get('/', (req, res) => {
-  res.json(users);
+router.post('/login', (req, res) => {
+  const { email, password } = req.body;
+  const user = users.find(u => u.email === email);
+
+  if (!user) {
+    return res.status(404).json({ message: 'Usuario no encontrado' });
+  }
+
+  const passwordIsValid = bcrypt.compareSync(password, user.password);
+  if (!passwordIsValid) {
+    return res.status(401).json({ message: 'Contraseña incorrecta' });
+  }
+
+  const token = jwt.sign({ id: user.id }, 'clave-jwt-secreta', {
+    expiresIn: 86400
+  });
+
+  res.status(200).json({ auth: true, token });
 });
 
-router.post('/', (req, res) => {
-  const { name, email, age } = req.body;
+router.post('/register', (req, res) => {
+  const { name, email, password, age } = req.body;
 
-  if (!name || !email || !age) {
+  if (!name || !email || !password || !age) {
     return res.status(400).json({ message: 'Faltan datos del usuario' });
   }
 
-  const id = uuidv4();
-
-  const newUser = { id, name, email, age };
+  const hashedPassword = bcrypt.hashSync(password, 8);
+  const newUser = { id: users.length + 1, name, email, password: hashedPassword, age };
   users.push(newUser);
+
   res.status(201).json(newUser);
-});
-
-
-router.get('/:id', (req, res) => {
-  const user = users.find(u => u.id === req.params.id);
-  if (user) {
-    res.json(user);
-  } else {
-    res.status(404).json({ message: 'Usuario no encontrado' });
-  }
-});
-
-router.put('/:id', (req, res) => {
-  const { name, email, age } = req.body;
-  const index = users.findIndex(u => u.id === req.params.id);
-
-  if (index !== -1) {
-    const updatedUser = { ...users[index], name, email, age };
-    users[index] = updatedUser;
-    res.json(updatedUser);
-  } else {
-    res.status(404).json({ message: 'Usuario no encontrado' });
-  }
-});
-
-router.delete('/:id', (req, res) => {
-  const index = users.findIndex(u => u.id === req.params.id);
-  if (index !== -1) {
-    users.splice(index, 1);
-    res.status(204).end();
-  } else {
-    res.status(404).json({ message: 'Usuario no encontrado' });
-  }
 });
 
 module.exports = router;
