@@ -5,8 +5,10 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 router.post('/login', (req, res) => {
+  console.log('Login request received:', req.body);
   const { email, password } = req.body;
   const user = users.find(u => u.email === email);
+  console.log('User found:', user);
 
   if (!user) {
     return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -35,7 +37,10 @@ router.post('/register', (req, res) => {
   const newUser = { id: users.length + 1, name, email, password: hashedPassword, age };
   users.push(newUser);
 
-  res.status(201).json(newUser);
+  res.status(201).json({
+    message: 'Usuario registrado exitosamente',
+    user: newUser
+  });
 });
 
 module.exports = router;
